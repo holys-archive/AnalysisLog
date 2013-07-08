@@ -87,7 +87,7 @@ bool isDigit(string token) {
 }
 
 //将每一行日志进行分割
-ReCord parse_line(char *buffer) {
+ReCord parse_line(char *buffer, int &ok) {
 
     ReCord r;
     char* keyWord = NULL;
@@ -103,6 +103,8 @@ ReCord parse_line(char *buffer) {
                 r.ip = keyWord;         //ip
                 cnt++;
             }
+            else
+                break;    //如果第一行不是ip开始，则这行不属于日志
         }
         else if (cnt == 1) {
             if (keyWord[0] == '[') {
@@ -160,8 +162,21 @@ ReCord parse_line(char *buffer) {
             }
         }
         else if (cnt == 7) {            //http x forward for
-            r.httpForward = keyWord;
-            cnt++;
+
+
+            if(keyWord[0] == '\"') {
+                r.httpForward = keyWord;
+                cnt++;
+            }
+            else {
+                r.httpForward = "";         //处理python代码情况, 没有r.httpforward
+
+                int len = strlen(keyWord);
+                keyWord[len-1] = '\0';
+                r.requestTime = atof(keyWord)/1000000;  //记微秒改为秒
+                cnt++;
+            }
+
         }
         else if (cnt == 8) {            // request time
             int len = strlen(keyWord);
@@ -171,6 +186,11 @@ ReCord parse_line(char *buffer) {
 
         keyWord = strtok(NULL, sep);
     }
+
+    if (cnt == 0)
+        ok = 0;
+    else
+        ok = 1;
 
     return r;
 }
@@ -256,14 +276,22 @@ void topVisitURL(int k)
 
 void initAnalysisLog(FILE* fp)
 {
+    //char filePath[256] = "access.log";
     char buffer[URL_MAX_LEN] = "\0";
-    ReCord record;
+    ReCord record, r;
+    int ok;
 
     while (fgets(buffer, URL_MAX_LEN, fp) != NULL) {
 
-        record = parse_line(buffer);
- //       cout << r.ip << "\t" << r.date << "\t" << r.requestURL << "\t" << r.status
- //            << "\t" << r.size << "\t" << r.referer<< "\t" << r.userAgent << "\t" << r.httpForward << "\t" << r.requestTime << endl;
+        if(buffer[0] < '0' || buffer[0] > '9') continue;    //过滤不属于同一格式的记录
+        record = parse_line(buffer, ok);
+
+        //r = record;
+        //printf("%s\n", buffer);
+
+        //cout << r.ip << "\t" << r.date << "\t" << r.requestURL << "\t" << r.status
+        //     << "\t" << r.size << "\t" << r.referer<< "\t" << r.userAgent << "\t" << r.httpForward  << "\t" << r.requestTime <<  endl;
+
         int part1 = int(record.requestTime * 1000)%10;
         int part2 = int(record.requestTime * 1000)/10;
 
@@ -366,12 +394,14 @@ void print()
 int main(int argc, char *argv[])
 {
     FILE *fp = NULL;
-    if (argc < 2) 
+
+    if (argc < 2)
         fp = stdin;
     else {
         char *filePath = argv[1];
         fp = fopen(filePath, "r");
     }
+
  //   char *filePath = "access.log";
     initAnalysisLog(fp);
  //   visitTime();
@@ -379,3 +409,4 @@ int main(int argc, char *argv[])
     print();
     return 0;
 }
+
