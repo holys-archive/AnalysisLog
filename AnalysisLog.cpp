@@ -254,14 +254,11 @@ void topVisitURL(int k)
 }
 
 
-void initAnalysisLog(char *filename)
+void initAnalysisLog(FILE* fp)
 {
-    //char filePath[256] = "access.log";
     char buffer[URL_MAX_LEN] = "\0";
-    FILE* fp = NULL;
     ReCord record;
 
-    fp = fopen(filename, "r");
     while (fgets(buffer, URL_MAX_LEN, fp) != NULL) {
 
         record = parse_line(buffer);
@@ -368,9 +365,15 @@ void print()
 
 int main(int argc, char *argv[])
 {
-    char *filePath = argv[1];
+    FILE *fp = NULL;
+    if (argc < 2) 
+        fp = stdin;
+    else {
+        char *filePath = argv[1];
+        fp = fopen(filePath, "r");
+    }
  //   char *filePath = "access.log";
-    initAnalysisLog(filePath);
+    initAnalysisLog(fp);
  //   visitTime();
     topVisitURL(500);
     print();
