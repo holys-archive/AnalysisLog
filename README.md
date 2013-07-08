@@ -37,3 +37,6 @@ log_format  access  '$remote_addr - $remote_user [$time_local] "$request"'
 </pre>
 
 ### 5.运行结果 ###
+
+
+链接:http://qing.wps.cn/l/93405cf7697741b5bb9c446d4602f750
