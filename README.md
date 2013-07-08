@@ -16,4 +16,6 @@ log_format  access  '$remote_addr - $remote_user [$time_local] "$request"'
 <code>make</code>
 (2)运行
 <code>analysislog access.log.part > report.html</code>
+(3)linux上crontab定时运行
+<code>*/5 * * * * path/to/AnalysisLog/analysislog path/to/AnalysisLog/access.log  2>&1 > path/to/AnalysisLog/report.html </code>
 </pre>
