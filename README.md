@@ -6,8 +6,9 @@ log_format  access  '$remote_addr - $remote_user [$time_local] "$request"'
 </pre>
 ### 2.AnalysisLog分析日志功能 ###
 <pre>
-(1)$request_time的统计分布
-(2)访问最多的url及其$request_time分布
+(1)总的请求数，总的请求时间，平均时间
+(2)$request_time的统计分布
+(3)访问最多的url及其$request_time分布
 </pre>
 ### 3.使用 ###
 
