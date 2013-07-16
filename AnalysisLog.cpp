@@ -13,7 +13,8 @@ using namespace std;
 
 #define URL_MAX_LEN 2096
 
-long totalRecordNum = 0;
+long totalRecordNum = 0;    //总的请求数
+double totalRecordTime = 0; //总的请求时间
 long totalURL = 0;
 
 struct ReCord {
@@ -287,10 +288,10 @@ void initAnalysisLog(FILE* fp)
         record = parse_line(buffer, ok);
 
         //r = record;
-        //printf("%s\n", buffer);
-
         //cout << r.ip << "\t" << r.date << "\t" << r.requestURL << "\t" << r.status
         //     << "\t" << r.size << "\t" << r.referer<< "\t" << r.userAgent << "\t" << r.httpForward  << "\t" << r.requestTime <<  endl;
+
+        totalRecordTime += record.requestTime;
 
         int part1 = int(record.requestTime * 1000)%10;
         int part2 = int(record.requestTime * 1000)/10;
@@ -305,8 +306,6 @@ void initAnalysisLog(FILE* fp)
         request_url_map[record.requestURL] += 1;    //统计请求最多url
 
         //cout << record.requestTime << " " << part1 << " " << part2 << endl;
-
-        //cout << record.requestTime << endl;
         request_url_time_map[record.requestURL].push_back(record.requestTime); //url相对的请求时间
     }
 }
@@ -324,6 +323,14 @@ void print()
            "</style>\n"
            "</head>\n"
            "<body>\n");
+    //总的访问情况
+    printf("<table class='a1'>"
+           "<col style='width:200px'>"
+           "<col style='width:200px'>"
+           "<col style='width:200px'>"
+           "<tr><td class='head' colspan='3'> General Visit</td></tr>"
+           "<tr><td class='desc' colspan='3'> General Visit by total number - total request time - average time </td></tr>"
+           "<tr><td class='d1'>%d</td><td class='d1'>%.3f</td><td class='d1'>%.3f</td></tr></table>", totalRecordNum, totalRecordTime, totalRecordTime/totalRecordNum);
 
     printf("<table class='a1'>"
            "<col style='width:60px'>"
