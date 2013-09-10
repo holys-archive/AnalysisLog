@@ -319,7 +319,7 @@ void print()
            "function x(c){for(var b=c.parentNode.parentNode.parentNode.parentNode.getElementsByClassName(c.id),a=0;a<b.length;a++){var name=b[a].className.split(' ');'hide'==name[0]?(b[a].className='show '+name[1],c.innerHTML='[-]collapse'):'show'==name[0]&&(b[a].className='hide '+name[1],c.innerHTML='[+]expand')}};"
            "</script>"
            "<style type='text/css'>"
-           "body {   font-family: Verdana;   font-size: 11px;}table.a1,table.a2 {   border-spacing: 0;   font-size: 11px;   margin: 5px;   table-layout: fixed;   white-space: nowrap;}table.a1 { width: 600px }table.a2 {   background-color: #EEE;   padding: 0 5px;   width: 590px;}.head {   background-color: #222;   color: #FFF;   padding: 5px;}.head span,.s {   cursor: pointer;   font-size: 9px;}.r { text-align: right }.red {   color: #D20B2C;   font-weight: 700;}.lnk {   font-weight:bold;   font-size:10px;}a { color: #222 }.desc {   background-color: #EEE;   color: #222;   padding: 5px;}.d1,.d2 {   overflow: hidden;   text-overflow: ellipsis;}.d1 { border-bottom: 1px dotted #eee }.d2 { border-bottom: 1px dotted #ccc }.bar {   background-color: #777;   border-right: 1px #FFF solid;   height: 10px;}.a-hide,.hide { display: none }"
+           "body {   font-family: Verdana;   font-size: 11px;}table.a1,table.a2 {   border-spacing: 0;   font-size: 11px;   margin: 5px;   table-layout: fixed;   white-space: nowrap;}table.a1 { width: 1000px }table.a2 {   background-color: #EEE;   padding: 0 5px;   width: 590px;}.head {   background-color: #222;   color: #FFF;   padding: 5px;}.head span,.s {   cursor: pointer;   font-size: 9px;}.r { text-align: right }.red {   color: #D20B2C;   font-weight: 700;}.lnk {   font-weight:bold;   font-size:10px;}a { color: #222 }.desc {   background-color: #EEE;   color: #222;   padding: 5px;}.d1,.d2 {   overflow: hidden;   text-overflow: ellipsis;}.d1 { border-bottom: 1px dotted #eee }.d2 { border-bottom: 1px dotted #ccc }.bar {   background-color: #777;   border-right: 1px #FFF solid;   height: 10px;}.a-hide,.hide { display: none }"
            "</style>\n"
            "</head>\n"
            "<body>\n");
@@ -329,7 +329,7 @@ void print()
            "<col style='width:200px'>"
            "<col style='width:200px'>"
            "<tr><td class='head' colspan='3'> General Visit</td></tr>"
-           "<tr><td class='desc' colspan='3'> General Visit by total number - total request time - average time </td></tr>"
+           "<tr><td class='desc d1' >total number</td> <td class='desc d1'>total request time</td><td class='desc d1'>average time </td></tr>"
            "<tr><td class='d1'>%d</td><td class='d1'>%.3f</td><td class='d1'>%.3f</td></tr></table>", totalRecordNum, totalRecordTime, totalRecordTime/totalRecordNum);
 
     printf("<table class='a1'>"
@@ -338,7 +338,7 @@ void print()
            "<col style='width:100px'>"
            "<col style='width:360px'>\n"
            "<tr><td class='head' colspan='3'> Request Time</td><td class='head r'><span onclick='t(this)'>Expand [+]</span></td></tr>"
-           "<tr><td class='desc' colspan='4'> Different request time by number - time - percent - bandwidth</td></tr>");
+           "<tr><td class='desc d1'> number</td><td class='desc d1'>time</td> <td class='desc d1'>percent</td><td class='desc d1'>bandwidth</td></tr>");
 
     //　访问时间分布
 
@@ -365,7 +365,7 @@ void print()
            "<col style='width:60px'>"
            "<col style='width:320px'>\n"
            "<tr><td class='head' colspan='3'>Request URL</td><td colspan='4' class='head r'><span onclick='y(this)'>[+] Expand</span></td</tr>"
-           "<tr><td class='desc' colspan='7'>Top Different request url by number - percent - min time - max time - average time - request url</td></tr>");
+           "<tr><td class='desc d1'>number</td><td class='desc d1'>percent</td><td class='desc d1'>min</td><td class='desc d1'>time</td><td class='desc d1' title='max time'>max time</td><td class='desc d1'>average time</td><td class='desc d1'>request url</td></tr>");
 
 
     for (int i = request_url_count.size()-1; i >= 0; --i) {
