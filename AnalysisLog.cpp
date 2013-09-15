@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 #include <map>
 #include <queue>
 #include <vector>
@@ -61,8 +62,11 @@ struct Url_Time {
 
 map<float, int> request_time_map;
 map<string, int> request_url_map;               //统计url的数量
+map<float, int> upstream_time_map;
+map<string, int> upstream_url_map;
 map<string, vector<float> > request_url_time_map; //记录访问url的时间
 map<string, Url_Time> url_time_map;   //记录一个url的请求时间的最小值、最大值、平均值
+map<string, vector<float> >upstream_url_time_map;
 
 vector<struct Count_Node> request_url_count;
 
@@ -74,6 +78,19 @@ bool isDigit(string token) {
     }
     return true;
 }
+
+float round(float num) {
+    int part1 = int(num * 1000) % 10;
+    int part2 = int(num * 1000) / 10;
+    
+    if (part1 >= 5){
+       num = (part2 + 1) * 1.0 / 100;
+    } else {
+        num = part2 * 1.0 / 100;
+    }
+    return num;
+}
+
 
 //将每一行日志进行分割
 ReCord parse_line(char *buffer, int &ok) {
@@ -107,7 +124,6 @@ ReCord parse_line(char *buffer, int &ok) {
         else if (cnt == 2) {            //request
 
             if (strcmp(keyWord, "\"-\"") == 0) {
-                //cout << "matches" << endl;
                 r.requestURL = keyWord;
                 cnt++;
             }
@@ -169,7 +185,6 @@ ReCord parse_line(char *buffer, int &ok) {
         }
         else if (cnt == 8) {            // request time
             int len = strlen(keyWord);
-            keyWord[len-1] = '\"';
             r.requestTime = atof(keyWord);
             cnt++;
         }
@@ -270,20 +285,18 @@ void initAnalysisLog(FILE* fp)
         totalRequestTime += record.requestTime;
         totalUpstreamTime += record.upstreamResponseTime;
 
-        int part1 = int(record.requestTime * 1000)%10;
-        int part2 = int(record.requestTime * 1000)/10;
+        record.requestTime = round(record.requestTime);
+        record.upstreamResponseTime = round(record.upstreamResponseTime);
 
-        if (part1 >= 5) {
-            record.requestTime = (part2+1)*1.0/100;
-        } else {
-            record.requestTime = part2*1.0/100;
-        }
         ++totalRequestNum;           //记录总的条数
         ++totalUpstreamNum;
         request_time_map[record.requestTime] += 1;
         request_url_map[record.requestURL] += 1;    //统计请求最多url
+        upstream_time_map[record.upstreamResponseTime] += 1;
+        upstream_url_map[record.requestURL] += 1;
 
         request_url_time_map[record.requestURL].push_back(record.requestTime); //url相对的请求时间
+        upstream_url_time_map[record.requestURL].push_back(record.upstreamResponseTime);
     }
 }
 
@@ -300,7 +313,7 @@ void print()
            "</style>\n"
            "</head>\n"
            "<body>\n");
-    //总的访问情况
+    // General Visit
     printf("<table class='a1'>"
            "<col style='width:200px'>"
            "<col style='width:200px'>"
@@ -310,6 +323,7 @@ void print()
            "<tr><td class='d1'>RequestTime</td><td class='d1'>%d</td><td class='d1'>%.3f</td><td class='d1'>%.3f</td></tr>"
            "<tr><td class='d1'>UpstreamResponseTime</td><td class='d1'>%d</td><td class='d1'>%.3f</td><td class='d1'>%.3f</td></table>", totalRequestNum, totalRequestTime, totalRequestTime/totalRequestNum, totalUpstreamNum, totalUpstreamTime, totalUpstreamTime/totalUpstreamNum);
 
+    // Request Time
     printf("<table class='a1'>"
            "<col style='width:60px'>"
            "<col style='width:80px'>"
@@ -318,17 +332,34 @@ void print()
            "<tr><td class='head' colspan='3'> Request Time</td><td class='head r'><span onclick='t(this)'>Expand [+]</span></td></tr>"
            "<tr><td class='desc d1'> number</td><td class='desc d1'>time</td> <td class='desc d1'>percent</td><td class='desc d1'>bandwidth</td></tr>");
 
-    //　访问时间分布
-
     map<float, int>::iterator it = request_time_map.begin();
 
     for(int i = 0; it != request_time_map.end(); ++it, ++i) {
-        //cout << it->first << "\t\t" << it->second << endl;
         float percent = (it->second*1.0/totalRequestNum)*100;
         if (i > 10)
             printf("<tr class='hide'><td class='d1'>%d</td><td class='d1'>%.2f</td><td class='d1'>%f%%</td><td class='d1'><div class='bar' style='width:%f%%'></div></td></tr>",it->second, it->first, percent, percent);
         else
             printf("<tr><td class='d1'>%d</td><td class='d1'>%.2f</td><td class='d1'>%f%%</td><td class='d1'><div class='bar' style='width:%f%%'></div></td></tr>", it->second, it->first, percent, percent);
+    }
+    printf("</table>");
+
+    // Upstream Response Time
+    printf("<table class='a1'>"
+           "<col style='width:60px'>"
+           "<col style='width:80px'>"
+           "<col style='width:100px'>"
+           "<col style='width:360px'>\n"
+           "<tr><td class='head' colspan='3'> Upstream Response Time</td><td class='head r'><span onclick='t(this)'>Expand [+]</span></td></tr>"
+           "<tr><td class='desc d1'> number</td><td class='desc d1'>time</td> <td class='desc d1'>percent</td><td class='desc d1'>bandwidth</td></tr>");
+
+    map<float, int>::iterator iu = upstream_time_map.begin();
+
+    for(int i = 0; iu != upstream_time_map.end(); ++iu, ++i) {
+        float percent = (iu->second*1.0/totalUpstreamNum)*100;
+        if (i > 10)
+            printf("<tr class='hide'><td class='d1'>%d</td><td class='d1'>%.2f</td><td class='d1'>%f%%</td><td class='d1'><div class='bar' style='width:%f%%'></div></td></tr>",iu->second, iu->first, percent, percent);
+        else
+            printf("<tr><td class='d1'>%d</td><td class='d1'>%.2f</td><td class='d1'>%f%%</td><td class='d1'><div class='bar' style='width:%f%%'></div></td></tr>", iu->second, iu->first, percent, percent);
     }
     printf("</table>");
 
@@ -389,7 +420,7 @@ int main(int argc, char *argv[])
 
     initAnalysisLog(fp);
     fclose(fp);
-    topVisitURL(500);
+    topVisitURL(30);
     print();
     return 0;
 }
