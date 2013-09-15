@@ -6,15 +6,16 @@
 #include <time.h>
 #include <map>
 #include <queue>
-#include <set>
 #include <vector>
 
 using namespace std;
 
 #define URL_MAX_LEN 2096
 
-long totalRecordNum = 0;    //总的请求数
-double totalRecordTime = 0; //总的请求时间
+long totalRequestNum = 0;    //总的请求数
+long totalUpstreamNum = 0;   // 总的Upstream 请求数
+double totalRequestTime = 0; //总的请求时间
+double totalUpstreamTime = 0; //总的Upstream 请求时间
 long totalURL = 0;
 
 struct ReCord {
@@ -27,6 +28,7 @@ struct ReCord {
     string userAgent;
     string httpForward;
     float requestTime;
+    float upstreamResponseTime;
 };
 
 //url计数结构
@@ -46,20 +48,6 @@ public:
     }
 };
 
-struct Part_Request_Time {
-    float time;
-    int count;
-    Part_Request_Time(float t=0.0, int c=0) {
-        time = t; count = c;
-    }
-};
-
-class Part_Request_Time_Cmp {
-public:
-    bool operator()(Part_Request_Time& p1, Part_Request_Time& p2) {
-        return p1.time < p2.time;
-    }
-};
 
 //记录url的访问时间的平均值、最小值、最大值
 struct Url_Time {
@@ -181,8 +169,14 @@ ReCord parse_line(char *buffer, int &ok) {
         }
         else if (cnt == 8) {            // request time
             int len = strlen(keyWord);
-            keyWord[len-1] = '\0';
+            keyWord[len-1] = '\"';
             r.requestTime = atof(keyWord);
+            cnt++;
+        }
+        else if (cnt == 9) {
+            int len = strlen(keyWord);
+            keyWord[len-1] = '\0';
+            r.upstreamResponseTime = atof(keyWord);
         }
 
         keyWord = strtok(NULL, sep);
@@ -194,24 +188,6 @@ ReCord parse_line(char *buffer, int &ok) {
         ok = 1;
 
     return r;
-}
-
-//　请求时间分布
-void visitTime()
-{
-    int i = 0;
-
-    priority_queue<Count_Node, vector<Count_Node>, Count_Node_Cmp> UrlCountQueue;
-    map<float, int>::iterator it = request_time_map.begin();
-
-    cout << "request time" << "\t\t" << "number" << endl;
-    for(; it != request_time_map.end(); ++it, ++i) {
-        cout << it->first << "\t\t" << it->second << endl;
-        if (i==1000) break;
-    }
-    cout << i << endl;
-
-
 }
 
 
@@ -291,7 +267,8 @@ void initAnalysisLog(FILE* fp)
         //cout << r.ip << "\t" << r.date << "\t" << r.requestURL << "\t" << r.status
         //     << "\t" << r.size << "\t" << r.referer<< "\t" << r.userAgent << "\t" << r.httpForward  << "\t" << r.requestTime <<  endl;
 
-        totalRecordTime += record.requestTime;
+        totalRequestTime += record.requestTime;
+        totalUpstreamTime += record.upstreamResponseTime;
 
         int part1 = int(record.requestTime * 1000)%10;
         int part2 = int(record.requestTime * 1000)/10;
@@ -301,11 +278,11 @@ void initAnalysisLog(FILE* fp)
         } else {
             record.requestTime = part2*1.0/100;
         }
-        ++totalRecordNum;           //记录总的条数
+        ++totalRequestNum;           //记录总的条数
+        ++totalUpstreamNum;
         request_time_map[record.requestTime] += 1;
         request_url_map[record.requestURL] += 1;    //统计请求最多url
 
-        //cout << record.requestTime << " " << part1 << " " << part2 << endl;
         request_url_time_map[record.requestURL].push_back(record.requestTime); //url相对的请求时间
     }
 }
@@ -329,8 +306,9 @@ void print()
            "<col style='width:200px'>"
            "<col style='width:200px'>"
            "<tr><td class='head' colspan='3'> General Visit</td></tr>"
-           "<tr><td class='desc d1' >total number</td> <td class='desc d1'>total request time</td><td class='desc d1'>average time </td></tr>"
-           "<tr><td class='d1'>%d</td><td class='d1'>%.3f</td><td class='d1'>%.3f</td></tr></table>", totalRecordNum, totalRecordTime, totalRecordTime/totalRecordNum);
+           "<tr><td class='desc d1'>name</td><td class='desc d1' >total</td> <td class='desc d1'>total request time</td><td class='desc d1'>average time </td></tr>"
+           "<tr><td class='d1'>RequestTime</td><td class='d1'>%d</td><td class='d1'>%.3f</td><td class='d1'>%.3f</td></tr>"
+           "<tr><td class='d1'>UpstreamResponseTime</td><td class='d1'>%d</td><td class='d1'>%.3f</td><td class='d1'>%.3f</td></table>", totalRequestNum, totalRequestTime, totalRequestTime/totalRequestNum, totalUpstreamNum, totalUpstreamTime, totalUpstreamTime/totalUpstreamNum);
 
     printf("<table class='a1'>"
            "<col style='width:60px'>"
@@ -346,7 +324,7 @@ void print()
 
     for(int i = 0; it != request_time_map.end(); ++it, ++i) {
         //cout << it->first << "\t\t" << it->second << endl;
-        float percent = (it->second*1.0/totalRecordNum)*100;
+        float percent = (it->second*1.0/totalRequestNum)*100;
         if (i > 10)
             printf("<tr class='hide'><td class='d1'>%d</td><td class='d1'>%.2f</td><td class='d1'>%f%%</td><td class='d1'><div class='bar' style='width:%f%%'></div></td></tr>",it->second, it->first, percent, percent);
         else
@@ -365,7 +343,7 @@ void print()
            "<col style='width:60px'>"
            "<col style='width:320px'>\n"
            "<tr><td class='head' colspan='3'>Request URL</td><td colspan='4' class='head r'><span onclick='y(this)'>[+] Expand</span></td</tr>"
-           "<tr><td class='desc d1'>number</td><td class='desc d1'>percent</td><td class='desc d1'>min</td><td class='desc d1'>time</td><td class='desc d1' title='max time'>max time</td><td class='desc d1'>average time</td><td class='desc d1'>request url</td></tr>");
+           "<tr><td class='desc d1'>number</td><td class='desc d1'>percent</td><td class='desc d1'>min</td><td class='desc d1'>average</td><td class='desc d1'>max</td><td class='desc d1'></td><td class='desc d1'>request url</td></tr>");
 
 
     for (int i = request_url_count.size()-1; i >= 0; --i) {
@@ -409,9 +387,8 @@ int main(int argc, char *argv[])
         fp = fopen(filePath, "r");
     }
 
- //   char *filePath = "access.log";
     initAnalysisLog(fp);
- //   visitTime();
+    fclose(fp);
     topVisitURL(500);
     print();
     return 0;
