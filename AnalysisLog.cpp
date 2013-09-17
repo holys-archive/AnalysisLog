@@ -191,7 +191,13 @@ ReCord parse_line(char *buffer, int &ok) {
         else if (cnt == 9) {
             int len = strlen(keyWord);
             keyWord[len-1] = '\0';
-            r.upstreamResponseTime = atof(keyWord);
+            // remove '-' out of result
+            if ( strcmp(keyWord, "-") != 0) {
+                r.upstreamResponseTime = atof(keyWord);
+            } else {
+                r.upstreamResponseTime = -1;
+                r.requestURL = "/IGNORED URL";
+            }
         }
         keyWord = strtok(NULL, sep);
     }
@@ -335,23 +341,27 @@ void initAnalysisLog(FILE* fp)
         //cout << r.ip << "\t" << r.date << "\t" << r.requestURL << "\t" << r.status
         //     << "\t" << r.size << "\t" << r.referer<< "\t" << r.userAgent << "\t" << r.httpForward  << "\t" << r.requestTime <<  endl;
 
+        //cout << record.upstreamResponseTime <<endl;
         totalRequestTime += record.requestTime;
-        totalUpstreamTime += record.upstreamResponseTime;
-
         record.requestTime = round(record.requestTime);
-        //record.upstreamResponseTime = round(record.upstreamResponseTime);
-
         ++totalRequestNum;           //记录总的条数
-        ++totalUpstreamNum;
         request_time_map[record.requestTime] += 1;
         request_url_map[record.requestURL] += 1;    //统计请求最多url
-        upstream_time_map[record.upstreamResponseTime] += 1;
-        upstream_url_map[record.requestURL] += 1;
+        request_url_time_map[record.requestURL].push_back(record.requestTime); //url相对的请求时间
+
+        if (record.upstreamResponseTime != -1) {  
+            totalUpstreamTime += record.upstreamResponseTime;
+            //record.upstreamResponseTime = round(record.upstreamResponseTime);
+            ++totalUpstreamNum;
+            upstream_time_map[record.upstreamResponseTime] += 1;
+            upstream_url_map[record.requestURL] += 1;
+            upstream_url_time_map[record.requestURL].push_back(record.upstreamResponseTime);
+        } else {
+            continue;
+        }
 
 
         //cout << record.requestTime << "\t" << record.upstreamResponseTime<<endl;
-        request_url_time_map[record.requestURL].push_back(record.requestTime); //url相对的请求时间
-        upstream_url_time_map[record.requestURL].push_back(record.upstreamResponseTime);
     }
 }
 
@@ -452,7 +462,7 @@ void print()
             float percent2 = pit->second*1.0/v.size() * 100;
 
             printf("<tr class='hide x%d'><td class='d1'>`-   %ld</td><td class='d1'>%.2f</td><td colspan='3' class='d1'>%f%%</td><td colspan='2' class='d1'><div class='bar' style='width:%f%%'></div></td></tr>",i, pit->second, pit->first, percent2, percent2);
-            if (k  > 130) break;
+            //if (k  > 130) break;
         }
     }
 
@@ -498,8 +508,6 @@ void print()
             printf("<tr><td class='d1'>%d</td><td class='d1'>%.2f</td><td class='d1'>%f%%</td><td class='d1'><div class='bar' style='width:%f%%'></div></td></tr>", it->second, it->first, percent, percent);
     }
     printf("</table>");
-
-    
     printf("</body>\n");
     printf("</html>\n");
 }
@@ -518,8 +526,8 @@ int main(int argc, char *argv[])
 
     initAnalysisLog(fp);
     fclose(fp);
-    topVisitURL(50);
-    topUpstreamURL(50);
+    topUpstreamURL(300);
+    topVisitURL(300);
     print();
     return 0;
 }
