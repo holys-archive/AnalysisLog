@@ -323,7 +323,8 @@ void initAnalysisLog(FILE* fp)
     ReCord record, r;
     int ok;
 
-    while (fgets(buffer, URL_MAX_LEN, fp) != NULL) {
+    while (fgets(buffer, URL_MAX_LEN, fp) != NULL)
+     {
 
         if(buffer[0] < '0' || buffer[0] > '9') continue;    //过滤不属于同一格式的记录
         record = parse_line(buffer, ok);
@@ -354,6 +355,7 @@ void initAnalysisLog(FILE* fp)
     }
 }
 
+
 void print()
 {
     printf("<html><head><title></title>");
@@ -374,51 +376,49 @@ void print()
            "<col style='width:200px'>"
            "<tr><td class='head' colspan='3'> General Visit</td></tr>"
            "<tr><td class='desc d1'>name</td><td class='desc d1' >total</td> <td class='desc d1'>total request time</td><td class='desc d1'>average time </td></tr>"
-           "<tr><td class='d1'>RequestTime</td><td class='d1'>%ld</td><td class='d1'>%.3f</td><td class='d1'>%.3f</td></tr>"
-           "<tr><td class='d1'>UpstreamResponseTime</td><td class='d1'>%ld</td><td class='d1'>%.3f</td><td class='d1'>%.3f</td></table>", totalRequestNum, totalRequestTime, totalRequestTime/totalRequestNum, totalUpstreamNum, totalUpstreamTime, totalUpstreamTime/totalUpstreamNum);
+           "<tr><td class='d1'>UpstreamResponseTime</td><td class='d1'>%ld</td><td class='d1'>%.3f</td><td class='d1'>%.3f</td></tr>"
+           "<tr><td class='d1'>RequestTime</td><td class='d1'>%ld</td><td class='d1'>%.3f</td><td class='d1'>%.3f</td></table>", totalUpstreamNum, totalUpstreamTime, totalUpstreamTime/totalUpstreamNum, totalRequestNum, totalRequestTime, totalRequestTime/totalRequestNum);
 
-    // Request Time
+
+
+    // UpstreamResponse Time <-> URL 
     printf("<table class='a1'>"
-           "<col style='width:60px'>"
-           "<col style='width:80px'>"
-           "<col style='width:100px'>"
-           "<col style='width:360px'>\n"
-           "<tr><td class='head' colspan='3'> Request Time</td><td class='head r'><span onclick='t(this)'>Expand [+]</span></td></tr>"
-           "<tr><td class='desc d1'> number</td><td class='desc d1'>time</td> <td class='desc d1'>percent</td><td class='desc d1'>bandwidth</td></tr>");
+               "<col style='width:60px'>"
+               "<col style='width:60px'>"
+               "<col style='width:30px'>"
+               "<col style='width:40px'>"
+               "<col style='width:30px'>"
+               "<col style='width:60px'>"
+               "<col style='width:320px'>\n"
+               "<tr><td class='head' colspan='3'>Upstream URL</td><td colspan='4' class='head r'><span onclick='y(this)'>[+] Expand</span></td</tr>"
+               "<tr><td class='desc d1'>number</td><td class='desc d1'>percent</td><td class='desc d1'>min</td><td class='desc d1'>max</td><td class='desc d1'>average</td><td class='desc d1'></td><td class='desc d1'>request url</td></tr>");
 
-    map<float, int>::iterator it = request_time_map.begin();
+    for (int i = upstream_url_count.size()-1; i >= 0; --i) {
+        Count_Node cn = upstream_url_count[i];
+        float percent = cn.count*1.0/totalUpstreamURL*100;
 
-    for(int i = 0; it != request_time_map.end(); ++it, ++i) {
-        float percent = (it->second*1.0/totalRequestNum)*100;
-        if (i > 10)
-            printf("<tr class='hide'><td class='d1'>%d</td><td class='d1'>%.2f</td><td class='d1'>%f%%</td><td class='d1'><div class='bar' style='width:%f%%'></div></td></tr>",it->second, it->first, percent, percent);
-        else
-            printf("<tr><td class='d1'>%d</td><td class='d1'>%.2f</td><td class='d1'>%f%%</td><td class='d1'><div class='bar' style='width:%f%%'></div></td></tr>", it->second, it->first, percent, percent);
+        Url_Time ut = upstream_url_counttime_map[cn.node];
+        
+        printf("<tr><td class='d1'>%ld</td><td class='d1'>%f%%</td><td class='d1'>%.2f</td><td class='d1'>%.2f</td><td class='d1'>%.2f</td><td class='d1'><span style='cursor:pointer' id='x%d' onclick='x(this)'>[+]expand</span></td><td class='d1'>%s</td></tr>",  cn.count, percent, ut.minimum, ut.maximum, ut.average, i, cn.node.c_str());
+
+        map<string, vector<float> >::iterator it = upstream_url_time_map.find(cn.node); map<float,
+        long> part_time_map; vector<float> &v = it->second; for(int j = 0; j < v.size(); j++) {
+        part_time_map[v[j]]++; }
+
+        map<float, long>::iterator pit = part_time_map.begin();
+        int k = 0;
+        for (;pit != part_time_map.end(); ++pit, ++k) {
+            float percent2 = pit->second*1.0/v.size() * 100;
+
+            printf("<tr class='hide x%d'><td class='d1'>`-   %ld</td><td class='d1'>%.2f</td><td colspan='3' class='d1'>%f%%</td><td colspan='2' class='d1'><div class='bar' style='width:%f%%'></div></td></tr>",i, pit->second, pit->first, percent2, percent2);
+            if (k  > 130) break;
+        }
+
     }
-    printf("</table>");
 
-    // Upstream Response Time
-    printf("<table class='a1'>"
-           "<col style='width:60px'>"
-           "<col style='width:80px'>"
-           "<col style='width:100px'>"
-           "<col style='width:360px'>\n"
-           "<tr><td class='head' colspan='3'> Upstream Response Time</td><td class='head r'><span onclick='t(this)'>Expand [+]</span></td></tr>"
-           "<tr><td class='desc d1'> number</td><td class='desc d1'>time</td> <td class='desc d1'>percent</td><td class='desc d1'>bandwidth</td></tr>");
+     printf("</table>\n");
 
-    map<float, int>::iterator iu = upstream_time_map.begin();
-
-    for(int i = 0; iu != upstream_time_map.end(); ++iu, ++i) {
-        float percent = (iu->second*1.0/totalUpstreamNum)*100;
-        if (i > 10)
-            printf("<tr class='hide'><td class='d1'>%d</td><td class='d1'>%.2f</td><td class='d1'>%f%%</td><td class='d1'><div class='bar' style='width:%f%%'></div></td></tr>",iu->second, iu->first, percent, percent);
-        else
-            printf("<tr><td class='d1'>%d</td><td class='d1'>%.2f</td><td class='d1'>%f%%</td><td class='d1'><div class='bar' style='width:%f%%'></div></td></tr>", iu->second, iu->first, percent, percent);
-    }
-    printf("</table>");
-
-
-    //　访问Url最多分布
+    //　Request Time <-> URL
     printf("<table class='a1'>"
            "<col style='width:60px'>"
            "<col style='width:60px'>"
@@ -455,51 +455,55 @@ void print()
             if (k  > 130) break;
         }
     }
-}
 
-void print2() {
-    // Upstream URL 分布 
+
+    // Upstream Response Time
+   
     printf("<table class='a1'>"
-               "<col style='width:60px'>"
-               "<col style='width:60px'>"
-               "<col style='width:30px'>"
-               "<col style='width:40px'>"
-               "<col style='width:30px'>"
-               "<col style='width:60px'>"
-               "<col style='width:320px'>\n"
-               "<tr><td class='head' colspan='3'>Upstream URL</td><td colspan='4' class='head r'><span onclick='y(this)'>[+] Expand</span></td</tr>"
-               "<tr><td class='desc d1'>number</td><td class='desc d1'>percent</td><td class='desc d1'>min</td><td class='desc d1'>max</td><td class='desc d1'>average</td><td class='desc d1'></td><td class='desc d1'>request url</td></tr>");
+           "<col style='width:60px'>"
+           "<col style='width:80px'>"
+           "<col style='width:100px'>"
+           "<col style='width:360px'>\n"
+           "<tr><td class='head' colspan='3'> Upstream Response Time</td><td class='head r'><span onclick='t(this)'>Expand [+]</span></td></tr>"
+           "<tr><td class='desc d1'> number</td><td class='desc d1'>time</td> <td class='desc d1'>percent</td><td class='desc d1'>bandwidth</td></tr>");
 
-    for (int i = upstream_url_count.size()-1; i >= 0; --i) {
-        Count_Node cn = upstream_url_count[i];
-        float percent = cn.count*1.0/totalUpstreamURL*100;
+    map<float, int>::iterator iu = upstream_time_map.begin();
 
-        Url_Time ut = upstream_url_counttime_map[cn.node];
-        
-        printf("<tr><td class='d1'>%ld</td><td class='d1'>%f%%</td><td class='d1'>%.2f</td><td class='d1'>%.2f</td><td class='d1'>%.2f</td><td class='d1'><span style='cursor:pointer' id='x%d' onclick='x(this)'>[+]expand</span></td><td class='d1'>%s</td></tr>",  cn.count, percent, ut.minimum, ut.maximum, ut.average, i, cn.node.c_str());
-
-        map<string, vector<float> >::iterator it = upstream_url_time_map.find(cn.node);
-        map<float, long> part_time_map;
-        vector<float> &v = it->second;
-        for(int j = 0; j < v.size(); j++) {
-            part_time_map[v[j]]++;
-        }
-
-        map<float, long>::iterator pit = part_time_map.begin();
-        int k = 0;
-        for (;pit != part_time_map.end(); ++pit, ++k) {
-            float percent2 = pit->second*1.0/v.size() * 100;
-
-            printf("<tr class='hide x%d'><td class='d1'>`-   %ld</td><td class='d1'>%.2f</td><td colspan='3' class='d1'>%f%%</td><td colspan='2' class='d1'><div class='bar' style='width:%f%%'></div></td></tr>",i, pit->second, pit->first, percent2, percent2);
-            if (k  > 130) break;
-        }
-
+    for(int i = 0; iu != upstream_time_map.end(); ++iu, ++i) {
+        float percent = (iu->second*1.0/totalUpstreamNum)*100;
+        if (i > 10)
+            printf("<tr class='hide'><td class='d1'>%d</td><td class='d1'>%.2f</td><td class='d1'>%f%%</td><td class='d1'><div class='bar' style='width:%f%%'></div></td></tr>",iu->second, iu->first, percent, percent);
+        else
+            printf("<tr><td class='d1'>%d</td><td class='d1'>%.2f</td><td class='d1'>%f%%</td><td class='d1'><div class='bar' style='width:%f%%'></div></td></tr>", iu->second, iu->first, percent, percent);
     }
+    printf("</table>");
 
-    printf("</table>\n");
+
+    // Request Time
+    printf("<table class='a1'>"
+           "<col style='width:60px'>"
+           "<col style='width:80px'>"
+           "<col style='width:100px'>"
+           "<col style='width:360px'>\n"
+           "<tr><td class='head' colspan='3'> Request Time</td><td class='head r'><span onclick='t(this)'>Expand [+]</span></td></tr>"
+           "<tr><td class='desc d1'> number</td><td class='desc d1'>time</td> <td class='desc d1'>percent</td><td class='desc d1'>bandwidth</td></tr>");
+
+    map<float, int>::iterator it = request_time_map.begin();
+
+    for(int i = 0; it != request_time_map.end(); ++it, ++i) {
+        float percent = (it->second*1.0/totalRequestNum)*100;
+        if (i > 10)
+            printf("<tr class='hide'><td class='d1'>%d</td><td class='d1'>%.2f</td><td class='d1'>%f%%</td><td class='d1'><div class='bar' style='width:%f%%'></div></td></tr>",it->second, it->first, percent, percent);
+        else
+            printf("<tr><td class='d1'>%d</td><td class='d1'>%.2f</td><td class='d1'>%f%%</td><td class='d1'><div class='bar' style='width:%f%%'></div></td></tr>", it->second, it->first, percent, percent);
+    }
+    printf("</table>");
+
+    
     printf("</body>\n");
     printf("</html>\n");
 }
+
 
 int main(int argc, char *argv[])
 {
@@ -517,7 +521,6 @@ int main(int argc, char *argv[])
     topVisitURL(50);
     topUpstreamURL(50);
     print();
-    print2();
     return 0;
 }
 
